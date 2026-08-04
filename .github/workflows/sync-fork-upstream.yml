@@ -45,23 +45,24 @@ jobs:
             echo "Synchronizing branch: $BRANCH"
             echo "----------------------------------------"
             
-            if ! git checkout -B "$BRANCH" "origin/$BRANCH"; then
-              echo "::error::Failed to checkout branch origin/$BRANCH"
+            if ! git rev-parse --verify --quiet "upstream/$BRANCH" >/dev/null; then
+              echo "::error::Branch $BRANCH does not exist on upstream"
               FAILED_BRANCHES+=("$BRANCH")
               continue
             fi
             
-            if ! git merge "upstream/$BRANCH" --ff-only; then
-              echo "::error::Failed to fast-forward merge upstream/$BRANCH into $BRANCH"
+            git checkout -B "$BRANCH" "upstream/$BRANCH"
+            
+            if ! git push origin "$BRANCH"; then
+              echo "::error::Failed to push branch $BRANCH to origin (non-fast-forward or push rejected)"
               FAILED_BRANCHES+=("$BRANCH")
               continue
             fi
-            
-            git push origin "$BRANCH"
           done
 
           if [ ${#FAILED_BRANCHES[@]} -ne 0 ]; then
             echo "::error::Synchronization failed for branches: ${FAILED_BRANCHES[*]}"
             exit 1
           fi
+
 
