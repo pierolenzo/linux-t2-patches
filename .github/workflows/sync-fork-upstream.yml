@@ -1,0 +1,67 @@
+name: Sync Fork Multi-Branch
+
+on:
+  schedule:
+    # Run sync daily at midnight
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+    inputs:
+      target_branch:
+        description: 'Specific branch to sync (leave empty for all default branches)'
+        required: false
+        type: string
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Repository Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Download every branch and full history
+
+      - name: Synchronize Branches
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Add upstream remote defensively
+          git remote add upstream https://github.com/t2linux/linux-t2-patches.git 2>/dev/null || git remote set-url upstream https://github.com/t2linux/linux-t2-patches.git
+          git fetch upstream
+
+          if [ -n "${{ github.event.inputs.target_branch }}" ]; then
+            BRANCHES=("${{ github.event.inputs.target_branch }}")
+          else
+            BRANCHES=("main" "6.18" "7.1")
+          fi
+
+          FAILED_BRANCHES=()
+
+          for BRANCH in "${BRANCHES[@]}"; do
+            echo "----------------------------------------"
+            echo "Synchronizing branch: $BRANCH"
+            echo "----------------------------------------"
+            
+            if ! git checkout -B "$BRANCH" "origin/$BRANCH"; then
+              echo "::error::Failed to checkout branch origin/$BRANCH"
+              FAILED_BRANCHES+=("$BRANCH")
+              continue
+            fi
+            
+            if ! git merge "upstream/$BRANCH" --ff-only; then
+              echo "::error::Failed to fast-forward merge upstream/$BRANCH into $BRANCH"
+              FAILED_BRANCHES+=("$BRANCH")
+              continue
+            fi
+            
+            git push origin "$BRANCH"
+          done
+
+          if [ ${#FAILED_BRANCHES[@]} -ne 0 ]; then
+            echo "::error::Synchronization failed for branches: ${FAILED_BRANCHES[*]}"
+            exit 1
+          fi
+
