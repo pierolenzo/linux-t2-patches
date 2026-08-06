@@ -51,10 +51,22 @@ jobs:
               continue
             fi
             
-            git checkout -B "$BRANCH" "upstream/$BRANCH"
+            if git rev-parse --verify --quiet "origin/$BRANCH" >/dev/null; then
+              # Branch exists on origin: rebase local commits on top of upstream
+              git checkout -B "$BRANCH" "origin/$BRANCH"
+              if ! git rebase "upstream/$BRANCH"; then
+                echo "::error::Rebase of $BRANCH on upstream/$BRANCH failed (conflict)"
+                git rebase --abort 2>/dev/null || true
+                FAILED_BRANCHES+=("$BRANCH")
+                continue
+              fi
+            else
+              # New branch on upstream only: create directly
+              git checkout -B "$BRANCH" "upstream/$BRANCH"
+            fi
             
-            if ! git push origin "$BRANCH"; then
-              echo "::error::Failed to push branch $BRANCH to origin (non-fast-forward or push rejected)"
+            if ! git push --force-with-lease origin "$BRANCH"; then
+              echo "::error::Failed to push branch $BRANCH to origin"
               FAILED_BRANCHES+=("$BRANCH")
               continue
             fi
