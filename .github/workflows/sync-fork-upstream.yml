@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       target_branch:
-        description: 'Specific branch to sync (leave empty for all default branches)'
+        description: "Specific branch to sync (leave empty for all default branches)"
         required: false
         type: string
 
@@ -35,7 +35,7 @@ jobs:
           if [ -n "${{ github.event.inputs.target_branch }}" ]; then
             BRANCHES=("${{ github.event.inputs.target_branch }}")
           else
-            BRANCHES=("main" "6.18" "7.1")
+            BRANCHES=("main" "6.18")
           fi
 
           FAILED_BRANCHES=()
@@ -76,5 +76,3 @@ jobs:
             echo "::error::Synchronization failed for branches: ${FAILED_BRANCHES[*]}"
             exit 1
           fi
-
-
