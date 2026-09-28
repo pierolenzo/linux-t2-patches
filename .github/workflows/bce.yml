@@ -48,9 +48,9 @@ jobs:
           fi
           git clone --depth 1 --single-branch --branch "v${KVER}" https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux-stable.git
           if [ -z "$BRANCH" ]; then
-            git clone --depth 10 $FORK ${{ github.workspace }}/t2bce-source
+            git clone $FORK ${{ github.workspace }}/t2bce-source
           else
-            git clone --depth 10 --branch $BRANCH $FORK ${{ github.workspace }}/t2bce-source
+            git clone --branch $BRANCH $FORK ${{ github.workspace }}/t2bce-source
           fi
           ${{ github.workspace }}/t2bce-source/generate-kernel-patches.sh \
             ${{ github.workspace }}/linux-stable ${{ github.workspace }}
@@ -66,7 +66,16 @@ jobs:
             KAIT2EN_INFO="KaiT2en-Fedora baseline: https://github.com/kaiT2en/KaiT2en-Fedora/commit/${KAIT2EN_SHA}"
           fi
 
-          RECENT_COMMITS=$(git -C "$T2BCE_DIR" log -n 5 --format="* %h %s (%an)")
+          # Dynamically extract all new commits since the previous sync
+          PREV_T2BCE_SHA=$(git log -1 --grep="Synchronized from:" --format="%B" 2>/dev/null | grep -oE "commit/[0-9a-f]{7,40}" | cut -d/ -f2 | head -n1 || echo "")
+          if [ -n "$PREV_T2BCE_SHA" ] && git -C "$T2BCE_DIR" cat-file -e "$PREV_T2BCE_SHA^{commit}" 2>/dev/null; then
+            RECENT_COMMITS=$(git -C "$T2BCE_DIR" log --reverse --format="* %h %s (%an)" "${PREV_T2BCE_SHA}..HEAD")
+          else
+            RECENT_COMMITS=$(git -C "$T2BCE_DIR" log -n 10 --format="* %h %s (%an)")
+          fi
+          if [ -z "$RECENT_COMMITS" ]; then
+            RECENT_COMMITS="* ${T2BCE_FULL_SHA:0:7} Latest drivers sync"
+          fi
 
           MSG="${{ github.event.inputs.commit_message }}"
           if [ -n "$MSG" ]; then
@@ -146,9 +155,9 @@ EOF
           fi
           git clone --depth 1 --single-branch --branch "v${KVER}" https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux-stable.git
           if [ -z "$BRANCH" ]; then
-            git clone --depth 10 $FORK ${{ github.workspace }}/t2bce-source
+            git clone $FORK ${{ github.workspace }}/t2bce-source
           else
-            git clone --depth 10 --branch $BRANCH $FORK ${{ github.workspace }}/t2bce-source
+            git clone --branch $BRANCH $FORK ${{ github.workspace }}/t2bce-source
           fi
           ${{ github.workspace }}/t2bce-source/generate-kernel-patches.sh \
             ${{ github.workspace }}/linux-stable ${{ github.workspace }}
@@ -164,7 +173,16 @@ EOF
             KAIT2EN_INFO="KaiT2en-Fedora baseline: https://github.com/kaiT2en/KaiT2en-Fedora/commit/${KAIT2EN_SHA}"
           fi
 
-          RECENT_COMMITS=$(git -C "$T2BCE_DIR" log -n 5 --format="* %h %s (%an)")
+          # Dynamically extract all new commits since the previous sync
+          PREV_T2BCE_SHA=$(git log -1 --grep="Synchronized from:" --format="%B" 2>/dev/null | grep -oE "commit/[0-9a-f]{7,40}" | cut -d/ -f2 | head -n1 || echo "")
+          if [ -n "$PREV_T2BCE_SHA" ] && git -C "$T2BCE_DIR" cat-file -e "$PREV_T2BCE_SHA^{commit}" 2>/dev/null; then
+            RECENT_COMMITS=$(git -C "$T2BCE_DIR" log --reverse --format="* %h %s (%an)" "${PREV_T2BCE_SHA}..HEAD")
+          else
+            RECENT_COMMITS=$(git -C "$T2BCE_DIR" log -n 10 --format="* %h %s (%an)")
+          fi
+          if [ -z "$RECENT_COMMITS" ]; then
+            RECENT_COMMITS="* ${T2BCE_FULL_SHA:0:7} Latest drivers sync"
+          fi
 
           MSG="${{ github.event.inputs.commit_message }}"
           if [ -n "$MSG" ]; then
