@@ -48,12 +48,44 @@ jobs:
           fi
           git clone --depth 1 --single-branch --branch "v${KVER}" https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux-stable.git
           if [ -z "$BRANCH" ]; then
-          git clone --depth 1 $FORK ${{ github.workspace }}/t2bce-source
+            git clone --depth 10 $FORK ${{ github.workspace }}/t2bce-source
           else
-          git clone --depth 1 --branch $BRANCH $FORK ${{ github.workspace }}/t2bce-source
+            git clone --depth 10 --branch $BRANCH $FORK ${{ github.workspace }}/t2bce-source
           fi
           ${{ github.workspace }}/t2bce-source/generate-kernel-patches.sh \
             ${{ github.workspace }}/linux-stable ${{ github.workspace }}
+
+          T2BCE_DIR="${{ github.workspace }}/t2bce-source"
+          T2BCE_FULL_SHA=$(git -C "$T2BCE_DIR" rev-parse HEAD)
+          T2BCE_CLEAN_URL="${FORK%.git}"
+          T2BCE_CLEAN_URL="${T2BCE_CLEAN_URL%/}"
+
+          KAIT2EN_INFO=""
+          if [ -f "$T2BCE_DIR/.upstream_kait2en_commit" ]; then
+            KAIT2EN_SHA=$(cut -c1-7 "$T2BCE_DIR/.upstream_kait2en_commit")
+            KAIT2EN_INFO="KaiT2en-Fedora baseline: https://github.com/kaiT2en/KaiT2en-Fedora/commit/${KAIT2EN_SHA}"
+          fi
+
+          RECENT_COMMITS=$(git -C "$T2BCE_DIR" log -n 5 --format="* %h %s (%an)")
+
+          MSG="${{ github.event.inputs.commit_message }}"
+          if [ -n "$MSG" ]; then
+            echo "$MSG" > ${{ github.workspace }}/commit_msg.txt
+          else
+            cat << EOF > ${{ github.workspace }}/commit_msg.txt
+bce: update driver stack for kernel v${KVER}
+
+Synchronized from: ${T2BCE_CLEAN_URL}/commit/${T2BCE_FULL_SHA}
+${KAIT2EN_INFO}
+
+Recent driver updates:
+${RECENT_COMMITS}
+
+Generated patches:
+- 1001-Add-t2bce-driver-stack.patch
+- 1002-Integrate-t2bce-driver-stack.patch
+EOF
+          fi
  
       - name: Cleanup and update the repo
         run: |
@@ -62,11 +94,16 @@ jobs:
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add .
-          MSG="${{ github.event.inputs.commit_message }}"
-          if [ -z "$MSG" ]; then
-          MSG="Update t2bce for kernel v${{ env.kver }}"
+          if ! git diff --staged --quiet; then
+            if [ -f commit_msg.txt ]; then
+              git commit -F commit_msg.txt
+              rm -f commit_msg.txt
+            else
+              git commit -m "Update t2bce for kernel v${{ env.kver }}"
+            fi
+          else
+            echo "No changes detected in generated patches."
           fi
-          git commit -m "${MSG}"
  
       - name: Push changes to the repo
         uses: ad-m/github-push-action@master
@@ -109,12 +146,44 @@ jobs:
           fi
           git clone --depth 1 --single-branch --branch "v${KVER}" https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux-stable.git
           if [ -z "$BRANCH" ]; then
-          git clone --depth 1 $FORK ${{ github.workspace }}/t2bce-source
+            git clone --depth 10 $FORK ${{ github.workspace }}/t2bce-source
           else
-          git clone --depth 1 --branch $BRANCH $FORK ${{ github.workspace }}/t2bce-source
+            git clone --depth 10 --branch $BRANCH $FORK ${{ github.workspace }}/t2bce-source
           fi
           ${{ github.workspace }}/t2bce-source/generate-kernel-patches.sh \
             ${{ github.workspace }}/linux-stable ${{ github.workspace }}
+
+          T2BCE_DIR="${{ github.workspace }}/t2bce-source"
+          T2BCE_FULL_SHA=$(git -C "$T2BCE_DIR" rev-parse HEAD)
+          T2BCE_CLEAN_URL="${FORK%.git}"
+          T2BCE_CLEAN_URL="${T2BCE_CLEAN_URL%/}"
+
+          KAIT2EN_INFO=""
+          if [ -f "$T2BCE_DIR/.upstream_kait2en_commit" ]; then
+            KAIT2EN_SHA=$(cut -c1-7 "$T2BCE_DIR/.upstream_kait2en_commit")
+            KAIT2EN_INFO="KaiT2en-Fedora baseline: https://github.com/kaiT2en/KaiT2en-Fedora/commit/${KAIT2EN_SHA}"
+          fi
+
+          RECENT_COMMITS=$(git -C "$T2BCE_DIR" log -n 5 --format="* %h %s (%an)")
+
+          MSG="${{ github.event.inputs.commit_message }}"
+          if [ -n "$MSG" ]; then
+            echo "$MSG" > ${{ github.workspace }}/commit_msg.txt
+          else
+            cat << EOF > ${{ github.workspace }}/commit_msg.txt
+bce: update driver stack for kernel v${KVER}
+
+Synchronized from: ${T2BCE_CLEAN_URL}/commit/${T2BCE_FULL_SHA}
+${KAIT2EN_INFO}
+
+Recent driver updates:
+${RECENT_COMMITS}
+
+Generated patches:
+- 1001-Add-t2bce-driver-stack.patch
+- 1002-Integrate-t2bce-driver-stack.patch
+EOF
+          fi
  
       - name: Cleanup and update the repo
         run: |
@@ -123,11 +192,16 @@ jobs:
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add .
-          MSG="${{ github.event.inputs.commit_message }}"
-          if [ -z "$MSG" ]; then
-          MSG="Update t2bce for kernel v${{ env.kver }}"
+          if ! git diff --staged --quiet; then
+            if [ -f commit_msg.txt ]; then
+              git commit -F commit_msg.txt
+              rm -f commit_msg.txt
+            else
+              git commit -m "Update t2bce for kernel v${{ env.kver }}"
+            fi
+          else
+            echo "No changes detected in generated patches."
           fi
-          git commit -m "${MSG}"
  
       - name: Push changes to the repo
         uses: ad-m/github-push-action@master
