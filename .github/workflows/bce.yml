@@ -37,9 +37,15 @@ jobs:
 
           FORK="${{ github.event.inputs.fork }}"
           if [ -z "$FORK" ]; then
-          FORK='https://github.com/AdityaGarg8/t2bce'
+            FORK="${{ vars.FORK }}"
+          fi
+          if [ -z "$FORK" ]; then
+            FORK='https://github.com/pierolenzo/t2bce'
           fi
           BRANCH="${{ github.event.inputs.branch }}"
+          if [ -z "$BRANCH" ]; then
+            BRANCH="${{ vars.BRANCH }}"
+          fi
           git clone --depth 1 --single-branch --branch "v${KVER}" https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux-stable.git
           if [ -z "$BRANCH" ]; then
           git clone --depth 1 $FORK ${{ github.workspace }}/t2bce-source
@@ -92,9 +98,15 @@ jobs:
 
           FORK="${{ github.event.inputs.fork }}"
           if [ -z "$FORK" ]; then
-          FORK='https://github.com/AdityaGarg8/t2bce'
+            FORK="${{ vars.FORK }}"
+          fi
+          if [ -z "$FORK" ]; then
+            FORK='https://github.com/pierolenzo/t2bce'
           fi
           BRANCH="${{ github.event.inputs.branch }}"
+          if [ -z "$BRANCH" ]; then
+            BRANCH="${{ vars.BRANCH }}"
+          fi
           git clone --depth 1 --single-branch --branch "v${KVER}" https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux-stable.git
           if [ -z "$BRANCH" ]; then
           git clone --depth 1 $FORK ${{ github.workspace }}/t2bce-source
