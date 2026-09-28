@@ -122,3 +122,13 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           branch: 6.18
+
+  Trigger-Overlay:
+    needs: [Publish-Mainline, Publish-LTS]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger t2-overlay update
+        run: |
+          gh workflow run update-t2gentoo-kernel.yml --repo pierolenzo/t2-overlay
+        env:
+          GH_TOKEN: ${{ secrets.PAT }}
