@@ -1,14 +1,14 @@
-From b626b19ca6ebb122822e1cc6e21033278b040aba Mon Sep 17 00:00:00 2001
+From e21415c4e86c2342780fbfdff5521a87317d7cd7 Mon Sep 17 00:00:00 2001
 From: "github-actions[bot]"
  <41898282+github-actions[bot]@users.noreply.github.com>
-Date: Mon, 28 Sep 2026 08:47:04 +0000
+Date: Mon, 28 Sep 2026 20:39:43 +0000
 Subject: [PATCH] Add t2bce driver stack
 
 ---
  drivers/staging/t2bce/Kconfig                 |   53 +
  drivers/staging/t2bce/Makefile                |    6 +
  drivers/staging/t2bce/t2bce_audio/Makefile    |    7 +
- drivers/staging/t2bce/t2bce_audio/audio.c     |  998 +++++++++++++
+ drivers/staging/t2bce/t2bce_audio/audio.c     |  999 +++++++++++++
  drivers/staging/t2bce/t2bce_audio/audio.h     |  157 +++
  .../staging/t2bce/t2bce_audio/description.h   |   42 +
  drivers/staging/t2bce/t2bce_audio/pcm.c       |  619 ++++++++
@@ -44,7 +44,7 @@ Subject: [PATCH] Add t2bce driver stack
  drivers/staging/t2bce/t2bce_vhci/transfer.h   |   81 ++
  drivers/staging/t2bce/t2bce_vhci/vhci.c       | 1218 ++++++++++++++++
  drivers/staging/t2bce/t2bce_vhci/vhci.h       |   69 +
- 39 files changed, 12365 insertions(+)
+ 39 files changed, 12366 insertions(+)
  create mode 100644 drivers/staging/t2bce/Kconfig
  create mode 100644 drivers/staging/t2bce/Makefile
  create mode 100644 drivers/staging/t2bce/t2bce_audio/Makefile
@@ -171,11 +171,12 @@ index 000000000..1fba36e10
 +ccflags-y += -I$(src)/../t2bce_core/include
 diff --git a/drivers/staging/t2bce/t2bce_audio/audio.c b/drivers/staging/t2bce/t2bce_audio/audio.c
 new file mode 100644
-index 000000000..47042983d
+index 000000000..4920081b5
 --- /dev/null
 +++ b/drivers/staging/t2bce/t2bce_audio/audio.c
-@@ -0,0 +1,998 @@
+@@ -0,0 +1,999 @@
 +#include <linux/pci.h>
++#include <linux/string.h>
 +#include <linux/spinlock.h>
 +#include <linux/module.h>
 +#include <linux/random.h>
@@ -615,8 +616,7 @@ index 000000000..47042983d
 +    INIT_LIST_HEAD(&sdev->list);
 +    sdev->dev_id = dev_id;
 +    sdev->buf_id = T2AUDIO_BUFFER_ID_NONE;
-+    memcpy(sdev->uid, uid, uid_len);
-+    sdev->uid[uid_len] = '\0';
++    strscpy(sdev->uid, uid);
 +
 +    if (t2audio_cmd_get_primitive_property(a, dev_id, dev_id,
 +            T2AUDIO_PROP(T2AUDIO_PROP_SCOPE_INPUT, T2AUDIO_PROP_LATENCY, 0), NULL, 0, &sdev->in_latency, sizeof(u32)))
@@ -737,7 +737,7 @@ index 000000000..47042983d
 +{
 +    struct t2audio_subdevice *sdev;
 +    list_for_each_entry(sdev, &a->subdevice_list, list) {
-+        if (!strcmp(uid, sdev->uid))
++        if (strstarts(uid, sdev->uid))
 +            return sdev;
 +    }
 +    return NULL;
@@ -782,6 +782,7 @@ index 000000000..47042983d
 +            dev_err(a->dev, "t2bce_audio: Subdevice not found for BufferStruct device %s\n", dev->name);
 +            continue;
 +        }
++        strscpy(dev->name, sdev->uid, sizeof(dev->name));
 +        sdev->buf_id = (u8) i;
 +        dev->num_input_streams = 0;
 +        for (j = 0; j < dev->num_output_streams; j++) {
@@ -797,7 +798,7 @@ index 000000000..47042983d
 +            continue;
 +        sdev->buf_id = i;
 +        pr_debug("t2bce_audio: Created device %i %s\n", i, sdev->uid);
-+        strcpy(a->bs->devices[i].name, sdev->uid);
++        strscpy(a->bs->devices[i].name, sdev->uid, sizeof(a->bs->devices[i].name));
 +        a->bs->devices[i].num_input_streams = 0;
 +        a->bs->devices[i].num_output_streams = 0;
 +        a->bs->num_devices = ++i;
