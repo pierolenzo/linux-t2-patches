@@ -176,6 +176,7 @@ index 000000000..01af77c0d
 +++ b/drivers/staging/t2bce/t2bce_audio/audio.c
 @@ -0,0 +1,1046 @@
 +#include <linux/pci.h>
++#include <linux/string.h>
 +#include <linux/spinlock.h>
 +#include <linux/module.h>
 +#include <linux/random.h>
@@ -661,8 +662,7 @@ index 000000000..01af77c0d
 +    INIT_LIST_HEAD(&sdev->list);
 +    sdev->dev_id = dev_id;
 +    sdev->buf_id = T2AUDIO_BUFFER_ID_NONE;
-+    memcpy(sdev->uid, uid, uid_len);
-+    sdev->uid[uid_len] = '\0';
++    strscpy(sdev->uid, uid);
 +
 +    if (t2audio_cmd_get_primitive_property(a, dev_id, dev_id,
 +            T2AUDIO_PROP(T2AUDIO_PROP_SCOPE_INPUT, T2AUDIO_PROP_LATENCY, 0), NULL, 0, &sdev->in_latency, sizeof(u32)))
@@ -783,7 +783,7 @@ index 000000000..01af77c0d
 +{
 +    struct t2audio_subdevice *sdev;
 +    list_for_each_entry(sdev, &a->subdevice_list, list) {
-+        if (!strcmp(uid, sdev->uid))
++        if (strstarts(uid, sdev->uid))
 +            return sdev;
 +    }
 +    return NULL;
@@ -828,6 +828,7 @@ index 000000000..01af77c0d
 +            dev_err(a->dev, "t2bce_audio: Subdevice not found for BufferStruct device %s\n", dev->name);
 +            continue;
 +        }
++        strscpy(dev->name, sdev->uid, sizeof(dev->name));
 +        sdev->buf_id = (u8) i;
 +        dev->num_input_streams = 0;
 +        for (j = 0; j < dev->num_output_streams; j++) {
@@ -843,7 +844,7 @@ index 000000000..01af77c0d
 +            continue;
 +        sdev->buf_id = i;
 +        pr_debug("t2bce_audio: Created device %i %s\n", i, sdev->uid);
-+        strcpy(a->bs->devices[i].name, sdev->uid);
++        strscpy(a->bs->devices[i].name, sdev->uid, sizeof(a->bs->devices[i].name));
 +        a->bs->devices[i].num_input_streams = 0;
 +        a->bs->devices[i].num_output_streams = 0;
 +        a->bs->num_devices = ++i;
