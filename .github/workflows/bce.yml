@@ -79,21 +79,23 @@ jobs:
 
           MSG="${{ github.event.inputs.commit_message }}"
           if [ -n "$MSG" ]; then
-            echo "$MSG" > ${{ github.workspace }}/commit_msg.txt
+            printf '%s\n' "$MSG" > ${{ github.workspace }}/commit_msg.txt
           else
-            cat << EOF > ${{ github.workspace }}/commit_msg.txt
-bce: update driver stack for kernel v${KVER}
-
-Synchronized from: ${T2BCE_CLEAN_URL}/commit/${T2BCE_FULL_SHA}
-${KAIT2EN_INFO}
-
-Recent driver updates:
-${RECENT_COMMITS}
-
-Generated patches:
-- 1001-Add-t2bce-driver-stack.patch
-- 1002-Integrate-t2bce-driver-stack.patch
-EOF
+            {
+              echo "bce: update driver stack for kernel v${KVER}"
+              echo ""
+              echo "Synchronized from: ${T2BCE_CLEAN_URL}/commit/${T2BCE_FULL_SHA}"
+              if [ -n "$KAIT2EN_INFO" ]; then
+                echo "$KAIT2EN_INFO"
+              fi
+              echo ""
+              echo "Recent driver updates:"
+              echo "$RECENT_COMMITS"
+              echo ""
+              echo "Generated patches:"
+              echo "- 1001-Add-t2bce-driver-stack.patch"
+              echo "- 1002-Integrate-t2bce-driver-stack.patch"
+            } > ${{ github.workspace }}/commit_msg.txt
           fi
  
       - name: Cleanup and update the repo
@@ -186,21 +188,23 @@ EOF
 
           MSG="${{ github.event.inputs.commit_message }}"
           if [ -n "$MSG" ]; then
-            echo "$MSG" > ${{ github.workspace }}/commit_msg.txt
+            printf '%s\n' "$MSG" > ${{ github.workspace }}/commit_msg.txt
           else
-            cat << EOF > ${{ github.workspace }}/commit_msg.txt
-bce: update driver stack for kernel v${KVER}
-
-Synchronized from: ${T2BCE_CLEAN_URL}/commit/${T2BCE_FULL_SHA}
-${KAIT2EN_INFO}
-
-Recent driver updates:
-${RECENT_COMMITS}
-
-Generated patches:
-- 1001-Add-t2bce-driver-stack.patch
-- 1002-Integrate-t2bce-driver-stack.patch
-EOF
+            {
+              echo "bce: update driver stack for kernel v${KVER}"
+              echo ""
+              echo "Synchronized from: ${T2BCE_CLEAN_URL}/commit/${T2BCE_FULL_SHA}"
+              if [ -n "$KAIT2EN_INFO" ]; then
+                echo "$KAIT2EN_INFO"
+              fi
+              echo ""
+              echo "Recent driver updates:"
+              echo "$RECENT_COMMITS"
+              echo ""
+              echo "Generated patches:"
+              echo "- 1001-Add-t2bce-driver-stack.patch"
+              echo "- 1002-Integrate-t2bce-driver-stack.patch"
+            } > ${{ github.workspace }}/commit_msg.txt
           fi
  
       - name: Cleanup and update the repo
