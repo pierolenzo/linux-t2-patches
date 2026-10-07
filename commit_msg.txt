@@ -1,0 +1,20 @@
+bce: update driver stack for kernel v7.2.7
+
+Synchronized from: https://github.com/pierolenzo/t2bce/commit/f89b5ca647352c4dc98d0e70cee8607399d0bf7c
+KaiT2en-Fedora baseline: https://github.com/kaiT2en/KaiT2en-Fedora/commit/8760e41
+
+Recent driver updates:
+* f89b5ca t2bce_ave: check t2bce_core_device_get() with IS_ERR (Jason Perlow)
+* 26383f7 ci: add daily cron schedule and conditional execution for patch generation (Piero Lenzo)
+* 0a20f1b ci: target pierolenzo/linux-t2-patches and pass repository fork inputs to bce.yml (Piero Lenzo)
+* cb00849 build: restore repository infrastructure and enable commit-history sync workflow (Piero Lenzo)
+* 275687d t2bce_audio: fix BufferStruct device matching and sanitize MMIO device name (Piero Lenzo)
+* 4da40df t2bce/audio: fix desync, HP out, introduce 0x1b stateful opcode/protocol (Andre Eikmeyer)
+* cdfba65 t2bce_vhci: reset-resume devices with bulk OUT endpoints after stateful sleep (Andre Eikmeyer)
+* 5cdb3f5 t2bce: restore transport around no-state teardown before sleep (Andre Eikmeyer)
+* 16fb535 vhci: bridgeOS requires a firmware device id before endpoints are created. (Andre Eikmeyer)
+* 6e7849b t2bce_vhci: also guard drop_endpoint against unconfirmed pause (Andre Eikmeyer)
+
+Generated patches:
+- 1001-Add-t2bce-driver-stack.patch
+- 1002-Integrate-t2bce-driver-stack.patch
