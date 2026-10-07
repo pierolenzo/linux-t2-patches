@@ -1,7 +1,7 @@
-From e21415c4e86c2342780fbfdff5521a87317d7cd7 Mon Sep 17 00:00:00 2001
+From c3076a90e9c520775dac97b57f4788e00efc6eb1 Mon Sep 17 00:00:00 2001
 From: "github-actions[bot]"
  <41898282+github-actions[bot]@users.noreply.github.com>
-Date: Mon, 28 Sep 2026 20:39:43 +0000
+Date: Wed, 7 Oct 2026 08:29:35 +0000
 Subject: [PATCH] Add t2bce driver stack
 
 ---
@@ -19,7 +19,7 @@ Subject: [PATCH] Add t2bce driver stack
  .../staging/t2bce/t2bce_audio/protocol_bce.h  |   72 +
  drivers/staging/t2bce/t2bce_audio/timing.h    |   58 +
  drivers/staging/t2bce/t2bce_ave/Makefile      |    7 +
- drivers/staging/t2bce/t2bce_ave/ave.c         |  129 ++
+ drivers/staging/t2bce/t2bce_ave/ave.c         |  130 ++
  drivers/staging/t2bce/t2bce_ave/encoder.c     | 1019 ++++++++++++++
  drivers/staging/t2bce/t2bce_ave/encoder.h     |   75 +
  drivers/staging/t2bce/t2bce_ave/protocol.c    | 1015 ++++++++++++++
@@ -44,7 +44,7 @@ Subject: [PATCH] Add t2bce driver stack
  drivers/staging/t2bce/t2bce_vhci/transfer.h   |   81 ++
  drivers/staging/t2bce/t2bce_vhci/vhci.c       | 1218 ++++++++++++++++
  drivers/staging/t2bce/t2bce_vhci/vhci.h       |   69 +
- 39 files changed, 12366 insertions(+)
+ 39 files changed, 12367 insertions(+)
  create mode 100644 drivers/staging/t2bce/Kconfig
  create mode 100644 drivers/staging/t2bce/Makefile
  create mode 100644 drivers/staging/t2bce/t2bce_audio/Makefile
@@ -2981,10 +2981,10 @@ index 000000000..3097093cf
 +ccflags-y += -I$(src)/../t2bce_core/include
 diff --git a/drivers/staging/t2bce/t2bce_ave/ave.c b/drivers/staging/t2bce/t2bce_ave/ave.c
 new file mode 100644
-index 000000000..0d7170dbc
+index 000000000..fb78e378d
 --- /dev/null
 +++ b/drivers/staging/t2bce/t2bce_ave/ave.c
-@@ -0,0 +1,129 @@
+@@ -0,0 +1,130 @@
 +#define pr_fmt(fmt) "t2bce_ave: " fmt
 +
 +#include <linux/device.h>
@@ -3052,8 +3052,9 @@ index 000000000..0d7170dbc
 +		goto err_class;
 +	}
 +	t2bce_ave->core_dev = t2bce_core_device_get();
-+	if (!t2bce_ave->core_dev) {
-+		ret = -EPROBE_DEFER;
++	if (IS_ERR(t2bce_ave->core_dev)) {
++		ret = PTR_ERR(t2bce_ave->core_dev);
++		t2bce_ave->core_dev = NULL;
 +		goto err_state;
 +	}
 +	t2bce_ave->dev = device_create(t2bce_ave_class, t2bce_ave->core_dev,
