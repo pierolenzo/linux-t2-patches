@@ -60,9 +60,13 @@ jobs:
           T2BCE_CLEAN_URL="${FORK%.git}"
           T2BCE_CLEAN_URL="${T2BCE_CLEAN_URL%/}"
 
-          KAIT2EN_INFO=""
-          if [ -f "$T2BCE_DIR/.upstream_kait2en_commit" ]; then
+          KAIT2EN_SHA=$(git -C "$T2BCE_DIR" log -1 --grep="Upstream:" --format="%B" 2>/dev/null | grep -oE "kaiT2en/KaiT2en-Fedora/commit/[0-9a-f]{7,40}" | head -n1 | cut -d/ -f4 | cut -c1-7 || echo "")
+          if [ -z "$KAIT2EN_SHA" ] && [ -f "$T2BCE_DIR/.upstream_kait2en_commit" ]; then
             KAIT2EN_SHA=$(cut -c1-7 "$T2BCE_DIR/.upstream_kait2en_commit")
+          fi
+
+          KAIT2EN_INFO=""
+          if [ -n "$KAIT2EN_SHA" ]; then
             KAIT2EN_INFO="KaiT2en-Fedora baseline: https://github.com/kaiT2en/KaiT2en-Fedora/commit/${KAIT2EN_SHA}"
           fi
 
@@ -169,9 +173,13 @@ jobs:
           T2BCE_CLEAN_URL="${FORK%.git}"
           T2BCE_CLEAN_URL="${T2BCE_CLEAN_URL%/}"
 
-          KAIT2EN_INFO=""
-          if [ -f "$T2BCE_DIR/.upstream_kait2en_commit" ]; then
+          KAIT2EN_SHA=$(git -C "$T2BCE_DIR" log -1 --grep="Upstream:" --format="%B" 2>/dev/null | grep -oE "kaiT2en/KaiT2en-Fedora/commit/[0-9a-f]{7,40}" | head -n1 | cut -d/ -f4 | cut -c1-7 || echo "")
+          if [ -z "$KAIT2EN_SHA" ] && [ -f "$T2BCE_DIR/.upstream_kait2en_commit" ]; then
             KAIT2EN_SHA=$(cut -c1-7 "$T2BCE_DIR/.upstream_kait2en_commit")
+          fi
+
+          KAIT2EN_INFO=""
+          if [ -n "$KAIT2EN_SHA" ]; then
             KAIT2EN_INFO="KaiT2en-Fedora baseline: https://github.com/kaiT2en/KaiT2en-Fedora/commit/${KAIT2EN_SHA}"
           fi
 
