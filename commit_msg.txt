@@ -1,10 +1,13 @@
 bce: update driver stack for kernel v6.18.53
 
-Synchronized from: https://github.com/pierolenzo/t2bce/commit/f89b5ca647352c4dc98d0e70cee8607399d0bf7c
-KaiT2en-Fedora baseline: https://github.com/kaiT2en/KaiT2en-Fedora/commit/8760e41
+Synchronized from: https://github.com/pierolenzo/t2bce/commit/93bbd8f4b27ff7507c920907527843d925956ddd
+KaiT2en-Fedora baseline: https://github.com/kaiT2en/KaiT2en-Fedora/commit/954db22
 
 Recent driver updates:
-* f89b5ca Latest drivers sync
+* 1135d97 sync: track baseline from git trailers and amend sync file per applied commit (Piero Lenzo)
+* 07e46d6 t2bce_audio: destroy the BCE queues on remove (Andreas Winther)
+* a1acbc6 t2bce_audio: split the BCE teardown around the card teardown (Andreas Winther)
+* 93bbd8f t2bce_audio: pass explicit workqueue flags (Andreas Winther)
 
 Generated patches:
 - 1001-Add-t2bce-driver-stack.patch
