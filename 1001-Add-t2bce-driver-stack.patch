@@ -8,8 +8,8 @@ Subject: [PATCH] Add t2bce driver stack
  drivers/staging/t2bce/Kconfig                 |   53 +
  drivers/staging/t2bce/Makefile                |    6 +
  drivers/staging/t2bce/t2bce_audio/Makefile    |    7 +
- drivers/staging/t2bce/t2bce_audio/audio.c     | 1046 ++++++++++++++
- drivers/staging/t2bce/t2bce_audio/audio.h     |  160 +++
+ drivers/staging/t2bce/t2bce_audio/audio.c     | 1008 +++++++++++++
+ drivers/staging/t2bce/t2bce_audio/audio.h     |  158 +++
  .../staging/t2bce/t2bce_audio/description.h   |   42 +
  drivers/staging/t2bce/t2bce_audio/pcm.c       |  624 +++++++++
  drivers/staging/t2bce/t2bce_audio/pcm.h       |   22 +
@@ -44,7 +44,7 @@ Subject: [PATCH] Add t2bce driver stack
  drivers/staging/t2bce/t2bce_vhci/transfer.h   |   81 ++
  drivers/staging/t2bce/t2bce_vhci/vhci.c       | 1218 ++++++++++++++++
  drivers/staging/t2bce/t2bce_vhci/vhci.h       |   69 +
- 39 files changed, 12520 insertions(+)
+ 39 files changed, 12459 insertions(+)
  create mode 100644 drivers/staging/t2bce/Kconfig
  create mode 100644 drivers/staging/t2bce/Makefile
  create mode 100644 drivers/staging/t2bce/t2bce_audio/Makefile
@@ -171,10 +171,10 @@ index 000000000..1fba36e10
 +ccflags-y += -I$(src)/../t2bce_core/include
 diff --git a/drivers/staging/t2bce/t2bce_audio/audio.c b/drivers/staging/t2bce/t2bce_audio/audio.c
 new file mode 100644
-index 000000000..01af77c0d
+index 000000000..73eb12bd8
 --- /dev/null
 +++ b/drivers/staging/t2bce/t2bce_audio/audio.c
-@@ -0,0 +1,1046 @@
+@@ -0,0 +1,1008 @@
 +#include <linux/pci.h>
 +#include <linux/string.h>
 +#include <linux/spinlock.h>
@@ -1224,10 +1224,10 @@ index 000000000..01af77c0d
 +module_exit(t2audio_module_exit);
 diff --git a/drivers/staging/t2bce/t2bce_audio/audio.h b/drivers/staging/t2bce/t2bce_audio/audio.h
 new file mode 100644
-index 000000000..bafe000fd
+index 000000000..be8891cbc
 --- /dev/null
 +++ b/drivers/staging/t2bce/t2bce_audio/audio.h
-@@ -0,0 +1,160 @@
+@@ -0,0 +1,158 @@
 +#ifndef T2AUDIO_H
 +#define T2AUDIO_H
 +
