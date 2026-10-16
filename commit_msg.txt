@@ -1,10 +1,11 @@
 bce: update driver stack for kernel v6.18.53
 
-Synchronized from: https://github.com/pierolenzo/t2bce/commit/7f2b4dce51e40b0851c30aab1fd8fbbb1bb14b47
-KaiT2en-Fedora baseline: https://github.com/kaiT2en/KaiT2en-Fedora/commit/6b9c407
+Synchronized from: https://github.com/pierolenzo/t2bce/commit/eac4bd8b796c673f926406447d3e3eebc4c487cb
+KaiT2en-Fedora baseline: https://github.com/kaiT2en/KaiT2en-Fedora/commit/443c729
 
 Recent driver updates:
-* 7f2b4dc t2bce_audio: map the bridgeOS ring write-combining (Andreas Winther)
+* 6455fbd t2bce: fix async pm (Andre Eikmeyer)
+* eac4bd8 kernel-args: remove pm_async=off (Andre Eikmeyer)
 
 Generated patches:
 - 1001-Add-t2bce-driver-stack.patch

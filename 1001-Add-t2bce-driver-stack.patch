@@ -1,14 +1,14 @@
-From 7026714f7345c00c95dd18fad50b11c5e5c3bfc4 Mon Sep 17 00:00:00 2001
+From f15da1c2a8e89e6dd60b4fccae9211a6822385b9 Mon Sep 17 00:00:00 2001
 From: "github-actions[bot]"
  <41898282+github-actions[bot]@users.noreply.github.com>
-Date: Fri, 16 Oct 2026 16:42:19 +0000
+Date: Fri, 16 Oct 2026 19:15:04 +0000
 Subject: [PATCH] Add t2bce driver stack
 
 ---
  drivers/staging/t2bce/Kconfig                 |   53 +
  drivers/staging/t2bce/Makefile                |    6 +
  drivers/staging/t2bce/t2bce_audio/Makefile    |    7 +
- drivers/staging/t2bce/t2bce_audio/audio.c     | 1046 ++++++++++++++
+ drivers/staging/t2bce/t2bce_audio/audio.c     | 1047 ++++++++++++++
  drivers/staging/t2bce/t2bce_audio/audio.h     |  160 +++
  .../staging/t2bce/t2bce_audio/description.h   |   42 +
  drivers/staging/t2bce/t2bce_audio/pcm.c       |  624 +++++++++
@@ -44,7 +44,7 @@ Subject: [PATCH] Add t2bce driver stack
  drivers/staging/t2bce/t2bce_vhci/transfer.h   |   81 ++
  drivers/staging/t2bce/t2bce_vhci/vhci.c       | 1218 ++++++++++++++++
  drivers/staging/t2bce/t2bce_vhci/vhci.h       |   69 +
- 39 files changed, 12520 insertions(+)
+ 39 files changed, 12521 insertions(+)
  create mode 100644 drivers/staging/t2bce/Kconfig
  create mode 100644 drivers/staging/t2bce/Makefile
  create mode 100644 drivers/staging/t2bce/t2bce_audio/Makefile
@@ -171,10 +171,10 @@ index 000000000..1fba36e10
 +ccflags-y += -I$(src)/../t2bce_core/include
 diff --git a/drivers/staging/t2bce/t2bce_audio/audio.c b/drivers/staging/t2bce/t2bce_audio/audio.c
 new file mode 100644
-index 000000000..01af77c0d
+index 000000000..c14616424
 --- /dev/null
 +++ b/drivers/staging/t2bce/t2bce_audio/audio.c
-@@ -0,0 +1,1046 @@
+@@ -0,0 +1,1047 @@
 +#include <linux/pci.h>
 +#include <linux/string.h>
 +#include <linux/spinlock.h>
