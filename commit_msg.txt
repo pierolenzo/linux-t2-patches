@@ -1,11 +1,12 @@
-bce: update driver stack for kernel v6.18.53
+bce: update driver stack for kernel v6.18.56
 
-Synchronized from: https://github.com/pierolenzo/t2bce/commit/eac4bd8b796c673f926406447d3e3eebc4c487cb
-KaiT2en-Fedora baseline: https://github.com/kaiT2en/KaiT2en-Fedora/commit/443c729
+Synchronized from: https://github.com/pierolenzo/t2bce/commit/7bd9c024681f3f23330e5864c793aa9436838576
+KaiT2en-Fedora baseline: https://github.com/kaiT2en/KaiT2en-Fedora/commit/bbf3878
 
 Recent driver updates:
-* 6455fbd t2bce: fix async pm (Andre Eikmeyer)
-* eac4bd8 kernel-args: remove pm_async=off (Andre Eikmeyer)
+* 60b8c1a t2bce_audio: fix buffer underrun on resume using ktime_get_raw() (Andre Eikmeyer)
+* ce88543 t2bce_audio: follow BridgeAudioSP zero timestamps, drop reanchor ratchet (Andre Eikmeyer)
+* 7bd9c02 sync: fetch upstream commit objects to allow 3-way merge fake ancestors (Piero Lenzo)
 
 Generated patches:
 - 1001-Add-t2bce-driver-stack.patch
