@@ -1,12 +1,11 @@
 bce: update driver stack for kernel v7.3
 
-Synchronized from: https://github.com/pierolenzo/t2bce/commit/7bd9c024681f3f23330e5864c793aa9436838576
-KaiT2en-Fedora baseline: https://github.com/kaiT2en/KaiT2en-Fedora/commit/bbf3878
+Synchronized from: https://github.com/pierolenzo/t2bce/commit/e8a66409abbfb474c35a6b9c15486b6cb9e42245
+KaiT2en-Fedora baseline: https://github.com/kaiT2en/KaiT2en-Fedora/commit/6128f86
 
 Recent driver updates:
-* 60b8c1a t2bce_audio: fix buffer underrun on resume using ktime_get_raw() (Andre Eikmeyer)
-* ce88543 t2bce_audio: follow BridgeAudioSP zero timestamps, drop reanchor ratchet (Andre Eikmeyer)
-* 7bd9c02 sync: fetch upstream commit objects to allow 3-way merge fake ancestors (Piero Lenzo)
+* 71b96bb t2bce_audio: read saft (Andre Eikmeyer)
+* e8a6640 t2bce_audio: count playback from START_IO, drop stale zero timestamps (Andre Eikmeyer)
 
 Generated patches:
 - 1001-Add-t2bce-driver-stack.patch
