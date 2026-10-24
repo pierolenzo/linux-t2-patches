@@ -1,11 +1,10 @@
 bce: update driver stack for kernel v6.18.56
 
-Synchronized from: https://github.com/pierolenzo/t2bce/commit/e8a66409abbfb474c35a6b9c15486b6cb9e42245
-KaiT2en-Fedora baseline: https://github.com/kaiT2en/KaiT2en-Fedora/commit/6128f86
+Synchronized from: https://github.com/pierolenzo/t2bce/commit/b9977b22de23ce165e8f35b88c4e6ed0fa17b38e
+KaiT2en-Fedora baseline: https://github.com/kaiT2en/KaiT2en-Fedora/commit/abbf15c
 
 Recent driver updates:
-* 71b96bb t2bce_audio: read saft (Andre Eikmeyer)
-* e8a6640 t2bce_audio: count playback from START_IO, drop stale zero timestamps (Andre Eikmeyer)
+* b9977b2 t2-sidecar: initial implementation (Andre Eikmeyer)
 
 Generated patches:
 - 1001-Add-t2bce-driver-stack.patch
