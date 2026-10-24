@@ -1,7 +1,7 @@
-From aa66cee44f4ed91e6f7966491d4ddf8a8159ae9b Mon Sep 17 00:00:00 2001
+From 1ab3f915be251c69c8dc4c131f926b8d8bf34b18 Mon Sep 17 00:00:00 2001
 From: "github-actions[bot]"
  <41898282+github-actions[bot]@users.noreply.github.com>
-Date: Fri, 23 Oct 2026 07:19:07 +0000
+Date: Sat, 24 Oct 2026 07:07:36 +0000
 Subject: [PATCH] Add t2bce driver stack
 
 ---
@@ -42,9 +42,9 @@ Subject: [PATCH] Add t2bce driver stack
  drivers/staging/t2bce/t2bce_vhci/queue.h      |   76 +
  drivers/staging/t2bce/t2bce_vhci/transfer.c   | 1246 +++++++++++++++++
  drivers/staging/t2bce/t2bce_vhci/transfer.h   |   81 ++
- drivers/staging/t2bce/t2bce_vhci/vhci.c       | 1218 ++++++++++++++++
+ drivers/staging/t2bce/t2bce_vhci/vhci.c       | 1221 ++++++++++++++++
  drivers/staging/t2bce/t2bce_vhci/vhci.h       |   69 +
- 39 files changed, 12737 insertions(+)
+ 39 files changed, 12740 insertions(+)
  create mode 100644 drivers/staging/t2bce/Kconfig
  create mode 100644 drivers/staging/t2bce/Makefile
  create mode 100644 drivers/staging/t2bce/t2bce_audio/Makefile
@@ -11759,10 +11759,10 @@ index 000000000..0ae979040
 +#endif //BCEDRIVER_TRANSFER_H
 diff --git a/drivers/staging/t2bce/t2bce_vhci/vhci.c b/drivers/staging/t2bce/t2bce_vhci/vhci.c
 new file mode 100644
-index 000000000..9c6f2047f
+index 000000000..0bb10533b
 --- /dev/null
 +++ b/drivers/staging/t2bce/t2bce_vhci/vhci.c
-@@ -0,0 +1,1218 @@
+@@ -0,0 +1,1221 @@
 +#include "vhci.h"
 +#include "command.h"
 +#include <linux/usb.h>
@@ -12134,7 +12134,10 @@ index 000000000..9c6f2047f
 +    memset(buf, 0, 2);
 +    buf[0] = (char)((pending << 1) & 0xff);
 +    buf[1] = (char)((pending >> 7) & 0xff);
-+    return buf[0] || buf[1];
++    /* Bitmap length in bytes, ports 8 and up live in buf[1] */
++    if (!buf[0] && !buf[1])
++        return 0;
++    return vhci->port_count >= 8 ? 2 : 1;
 +}
 +
 +static int bce_vhci_reset_device(struct bce_vhci *vhci, int index, u16 timeout);
