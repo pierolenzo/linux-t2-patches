@@ -1,14 +1,14 @@
-From 1ab3f915be251c69c8dc4c131f926b8d8bf34b18 Mon Sep 17 00:00:00 2001
+From 577a833843c3f953d49c7d005196a340297b77f3 Mon Sep 17 00:00:00 2001
 From: "github-actions[bot]"
  <41898282+github-actions[bot]@users.noreply.github.com>
-Date: Sat, 24 Oct 2026 07:07:36 +0000
+Date: Mon, 2 Nov 2026 09:14:33 +0000
 Subject: [PATCH] Add t2bce driver stack
 
 ---
  drivers/staging/t2bce/Kconfig                 |   53 +
  drivers/staging/t2bce/Makefile                |    6 +
  drivers/staging/t2bce/t2bce_audio/Makefile    |    7 +
- drivers/staging/t2bce/t2bce_audio/audio.c     | 1181 ++++++++++++++++
+ drivers/staging/t2bce/t2bce_audio/audio.c     | 1184 ++++++++++++++++
  drivers/staging/t2bce/t2bce_audio/audio.h     |  172 +++
  .../staging/t2bce/t2bce_audio/description.h   |   42 +
  drivers/staging/t2bce/t2bce_audio/pcm.c       |  699 +++++++++
@@ -44,7 +44,7 @@ Subject: [PATCH] Add t2bce driver stack
  drivers/staging/t2bce/t2bce_vhci/transfer.h   |   81 ++
  drivers/staging/t2bce/t2bce_vhci/vhci.c       | 1221 ++++++++++++++++
  drivers/staging/t2bce/t2bce_vhci/vhci.h       |   69 +
- 39 files changed, 12740 insertions(+)
+ 39 files changed, 12743 insertions(+)
  create mode 100644 drivers/staging/t2bce/Kconfig
  create mode 100644 drivers/staging/t2bce/Makefile
  create mode 100644 drivers/staging/t2bce/t2bce_audio/Makefile
@@ -171,10 +171,10 @@ index 000000000..1fba36e10
 +ccflags-y += -I$(src)/../t2bce_core/include
 diff --git a/drivers/staging/t2bce/t2bce_audio/audio.c b/drivers/staging/t2bce/t2bce_audio/audio.c
 new file mode 100644
-index 000000000..a30e546ab
+index 000000000..9db4fc990
 --- /dev/null
 +++ b/drivers/staging/t2bce/t2bce_audio/audio.c
-@@ -0,0 +1,1181 @@
+@@ -0,0 +1,1184 @@
 +#include <linux/pci.h>
 +#include <linux/string.h>
 +#include <linux/spinlock.h>
@@ -740,9 +740,11 @@ index 000000000..a30e546ab
 +
 +    if (sdev->is_pcm)
 +        t2audio_create_pcm(sdev);
-+    /* Headphone Jack status */
-+    if (!strcmp(sdev->uid, "Codec Output")) {
-+        if (snd_jack_new(a->card, sdev->uid, SND_JACK_HEADPHONE, &sdev->jack, true, false))
++    /* Headphone Jack status. The iMacPro1,1 reports one combined "Codec" device
++     * instead of "Codec Output" and "Codec Input". Its jack keeps the
++     * "Codec Output" name so the UCM JackControl matches on every model. */
++    if (!strcmp(sdev->uid, "Codec Output") || !strcmp(sdev->uid, "Codec")) {
++        if (snd_jack_new(a->card, "Codec Output", SND_JACK_HEADPHONE, &sdev->jack, true, false))
 +            dev_warn(a->dev, "Failed to create an attached jack for %s\n", sdev->uid);
 +        t2audio_cmd_property_listener(a, sdev->dev_id, sdev->dev_id,
 +                T2AUDIO_PROP(T2AUDIO_PROP_SCOPE_OUTPUT, T2AUDIO_PROP_JACK_PLUGGED, 0));
@@ -1340,6 +1342,7 @@ index 000000000..a30e546ab
 +        {"Speaker", 0},
 +        {"Digital Mic", 1},
 +        {"Codec Output", 2},
++        {"Codec", 2},
 +        {"Codec Input", 3},
 +        {"Bridge Loopback", 4},
 +        {}
@@ -1353,7 +1356,7 @@ index 000000000..a30e546ab
 +MODULE_LICENSE("GPL");
 +MODULE_AUTHOR("André Eikmeyer <andre.eikmeyer@kait2en.org>");
 +MODULE_DESCRIPTION("Apple T2 Audio Driver");
-+MODULE_VERSION("0.04");
++MODULE_VERSION("0.05");
 +module_init(t2audio_module_init);
 +module_exit(t2audio_module_exit);
 diff --git a/drivers/staging/t2bce/t2bce_audio/audio.h b/drivers/staging/t2bce/t2bce_audio/audio.h
@@ -13060,5 +13063,5 @@ index 000000000..c2d0d1b60
 +
 +#endif //BCE_VHCI_H
 -- 
-2.55.0
+2.56.0
 

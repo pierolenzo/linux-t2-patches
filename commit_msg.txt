@@ -1,10 +1,11 @@
 bce: update driver stack for kernel v7.3
 
-Synchronized from: https://github.com/pierolenzo/t2bce/commit/b9977b22de23ce165e8f35b88c4e6ed0fa17b38e
-KaiT2en-Fedora baseline: https://github.com/kaiT2en/KaiT2en-Fedora/commit/abbf15c
+Synchronized from: https://github.com/pierolenzo/t2bce/commit/ffc822b8f8ced8dbaa7cf550d00b6e61ae9ef5c6
+KaiT2en-Fedora baseline: https://github.com/kaiT2en/KaiT2en-Fedora/commit/fafebf4
 
 Recent driver updates:
-* b9977b2 t2-sidecar: initial implementation (Andre Eikmeyer)
+* 8e83a45 docs: refactor to show apps with own page anchors, fix minor inconsitencies (Andre Eikmeyer)
+* ffc822b t2bce_audio: map the combined iMacPro1,1 Codec device to PCM 2 with the headphone jack (Andre Eikmeyer)
 
 Generated patches:
 - 1001-Add-t2bce-driver-stack.patch
