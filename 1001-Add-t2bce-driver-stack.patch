@@ -1,7 +1,7 @@
-From 0610ec13e193c72d607c8083f747a82d5c864e96 Mon Sep 17 00:00:00 2001
+From f97b31af88db271596b528233008b534751e7a07 Mon Sep 17 00:00:00 2001
 From: "github-actions[bot]"
  <41898282+github-actions[bot]@users.noreply.github.com>
-Date: Mon, 2 Nov 2026 09:14:28 +0000
+Date: Tue, 3 Nov 2026 09:20:33 +0000
 Subject: [PATCH] Add t2bce driver stack
 
 ---
@@ -42,9 +42,9 @@ Subject: [PATCH] Add t2bce driver stack
  drivers/staging/t2bce/t2bce_vhci/queue.h      |   76 +
  drivers/staging/t2bce/t2bce_vhci/transfer.c   | 1246 +++++++++++++++++
  drivers/staging/t2bce/t2bce_vhci/transfer.h   |   81 ++
- drivers/staging/t2bce/t2bce_vhci/vhci.c       | 1221 ++++++++++++++++
+ drivers/staging/t2bce/t2bce_vhci/vhci.c       | 1230 ++++++++++++++++
  drivers/staging/t2bce/t2bce_vhci/vhci.h       |   69 +
- 39 files changed, 12743 insertions(+)
+ 39 files changed, 12752 insertions(+)
  create mode 100644 drivers/staging/t2bce/Kconfig
  create mode 100644 drivers/staging/t2bce/Makefile
  create mode 100644 drivers/staging/t2bce/t2bce_audio/Makefile
@@ -11762,10 +11762,10 @@ index 000000000..0ae979040
 +#endif //BCEDRIVER_TRANSFER_H
 diff --git a/drivers/staging/t2bce/t2bce_vhci/vhci.c b/drivers/staging/t2bce/t2bce_vhci/vhci.c
 new file mode 100644
-index 000000000..0bb10533b
+index 000000000..0f91b8fa2
 --- /dev/null
 +++ b/drivers/staging/t2bce/t2bce_vhci/vhci.c
-@@ -0,0 +1,1221 @@
+@@ -0,0 +1,1230 @@
 +#include "vhci.h"
 +#include "command.h"
 +#include <linux/usb.h>
@@ -11845,16 +11845,20 @@ index 000000000..0bb10533b
 +    }
 +    t2bce_core_client_set_pm_ops(vhci->client, &bce_vhci_pm_ops, vhci);
 +
-+    if ((status = bce_vhci_create_message_queues(vhci)))
-+        goto fail_mq;
-+    if ((status = bce_vhci_create_event_queues(vhci)))
-+        goto fail_eq;
-+
 +    vhci->tq_state_wq = alloc_ordered_workqueue("t2bce_vhci-tq-state", 0);
++    if (!vhci->tq_state_wq) {
++        status = -ENOMEM;
++        goto fail_wq;
++    }
 +    INIT_WORK(&vhci->w_fw_events, bce_vhci_handle_firmware_events_w);
 +    INIT_WORK(&vhci->w_add_hcd, bce_vhci_add_hcd_w);
 +    vhci->port_change_pending = 0;
 +    vhci->system_suspending = false;
++
++    if ((status = bce_vhci_create_message_queues(vhci)))
++        goto fail_mq;
++    if ((status = bce_vhci_create_event_queues(vhci)))
++        goto fail_eq;
 +
 +    vhci->hcd = usb_create_hcd(&bce_vhci_driver, vhci->vdev, "t2bce_vhci");
 +    if (!vhci->hcd) {
@@ -11886,6 +11890,9 @@ index 000000000..0bb10533b
 +fail_eq:
 +    bce_vhci_destroy_message_queues(vhci);
 +fail_mq:
++    destroy_workqueue(vhci->tq_state_wq);
++    vhci->tq_state_wq = NULL;
++fail_wq:
 +    t2bce_core_client_set_pm_ops(vhci->client, NULL, NULL);
 +    t2bce_core_client_put(vhci->client);
 +    vhci->client = NULL;
@@ -11903,6 +11910,8 @@ index 000000000..0bb10533b
 +    bce_vhci_remove_hcd(vhci);
 +    bce_vhci_destroy_event_queues(vhci);
 +    bce_vhci_destroy_message_queues(vhci);
++    destroy_workqueue(vhci->tq_state_wq);
++    vhci->tq_state_wq = NULL;
 +    t2bce_core_client_set_pm_ops(vhci->client, NULL, NULL);
 +    t2bce_core_client_put(vhci->client);
 +    vhci->client = NULL;
@@ -12983,7 +12992,7 @@ index 000000000..0bb10533b
 +MODULE_LICENSE("GPL");
 +MODULE_AUTHOR("André Eikmeyer <andre.eikmeyer@gmail.com>");
 +MODULE_DESCRIPTION("Apple T2 BCE VHCI Driver");
-+MODULE_VERSION("0.02");
++MODULE_VERSION("0.03");
 +MODULE_SOFTDEP("pre: t2bce_core");
 +module_init(bce_vhci_module_init);
 +module_exit(bce_vhci_module_exit);
@@ -13063,5 +13072,5 @@ index 000000000..c2d0d1b60
 +
 +#endif //BCE_VHCI_H
 -- 
-2.55.0
+2.56.0
 

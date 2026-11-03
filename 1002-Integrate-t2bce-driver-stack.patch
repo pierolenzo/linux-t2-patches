@@ -1,7 +1,7 @@
-From 4c2bf138d028fca6459ab9638b1f8e7c0f691a1e Mon Sep 17 00:00:00 2001
+From 59498a6c19638db3a3e6b8e11e36967394ae650f Mon Sep 17 00:00:00 2001
 From: "github-actions[bot]"
  <41898282+github-actions[bot]@users.noreply.github.com>
-Date: Mon, 2 Nov 2026 09:14:28 +0000
+Date: Tue, 3 Nov 2026 09:20:33 +0000
 Subject: [PATCH] Integrate t2bce driver stack
 
 ---
@@ -30,5 +30,5 @@ index e681e4035..721cf36ff 100644
  obj-$(CONFIG_GPIB)	 	+= gpib/
 +obj-$(CONFIG_T2BCE_CORE)		+= t2bce/
 -- 
-2.55.0
+2.56.0
 
