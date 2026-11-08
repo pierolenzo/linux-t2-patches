@@ -1,11 +1,10 @@
 bce: update driver stack for kernel v6.18.56
 
-Synchronized from: https://github.com/pierolenzo/t2bce/commit/377d3dbda0564b7b5bb562392d9c8798501082f3
-KaiT2en-Fedora baseline: https://github.com/kaiT2en/KaiT2en-Fedora/commit/3206d9e
+Synchronized from: https://github.com/pierolenzo/t2bce/commit/2b1d845d6cc40828381d9ffc5b0d93efab4137fb
+KaiT2en-Fedora baseline: https://github.com/kaiT2en/KaiT2en-Fedora/commit/2279af4
 
 Recent driver updates:
-* 937fd47 t2bce_audio-alsa-ucm-conf: the iMacPro1,1 mic has four channels, three dropped the HiFi profile (Andre Eikmeyer)
-* 377d3db t2bce_vhci: create the state workqueue before the event queues, fixes the iMacPro1,1 boot oops (Andre Eikmeyer)
+* 2b1d845 t2bce, t2sep, t2gmux: tidy READMEs and comments (Andre Eikmeyer)
 
 Generated patches:
 - 1001-Add-t2bce-driver-stack.patch
