@@ -1,0 +1,60 @@
+From 3d95f93b30b8a4f9a0c78e35a123456789abcdef Mon Sep 17 00:00:00 2001
+From: Maxime Ripard <mripard@kernel.org>
+Date: Mon, 15 Sep 2025 10:00:00 +0200
+Subject: [PATCH] drm/appletbdrm: Convert to atomic_create_state
+
+The plane reset hook has been historically overloaded to both allocate
+the initial plane state at boot and reset the software and hardware
+state on events like resume.
+
+Now that we have the atomic_create_state hook, we can move the initial
+allocation to that hook and let the core manage the plane state lifetime.
+
+Let's convert appletbdrm to use atomic_create_state.
+
+Signed-off-by: Maxime Ripard <mripard@kernel.org>
+[commit 3d95f93b30b8 upstream; backported to 7.3 to fix resume warning with 5002]
+Signed-off-by: Piero Lenzo <pierolenzo@gmail.com>
+---
+ drivers/gpu/drm/tiny/appletbdrm.c | 18 +++++++++---------
+ 1 file changed, 9 insertions(+), 9 deletions(-)
+
+diff --git a/drivers/gpu/drm/tiny/appletbdrm.c b/drivers/gpu/drm/tiny/appletbdrm.c
+index 4297d9c11..350dc598c 100644
+--- a/drivers/gpu/drm/tiny/appletbdrm.c
++++ b/drivers/gpu/drm/tiny/appletbdrm.c
+@@ -509,17 +509,17 @@ static void appletbdrm_primary_plane_helper_atomic_disable(struct drm_plane *pl
+ 	drm_dev_exit(idx);
+ }
+ 
+-static void appletbdrm_primary_plane_reset(struct drm_plane *plane)
++static struct drm_plane_state *
++appletbdrm_primary_plane_atomic_create_state(struct drm_plane *plane)
+ {
+ 	struct appletbdrm_plane_state *appletbdrm_state;
+ 
+-	WARN_ON(plane->state);
+-
+ 	appletbdrm_state = kzalloc_obj(*appletbdrm_state);
+ 	if (!appletbdrm_state)
+-		return;
++		return ERR_PTR(-ENOMEM);
+ 
+-	__drm_gem_reset_shadow_plane(plane, &appletbdrm_state->base);
++	__drm_atomic_helper_plane_state_init(&appletbdrm_state->base.base, plane);
++	drm_format_conv_state_init(&appletbdrm_state->base.fmtcnv_state);
+ 
+ 	return &appletbdrm_state->base.base;
+ }
+ 
+ static struct drm_plane_state *appletbdrm_primary_plane_duplicate_state(struct drm_plane *plane)
+@@ -571,7 +571,7 @@ static void appletbdrm_primary_plane_destroy_state(struct drm_plane *plane,
+ static const struct drm_plane_funcs appletbdrm_primary_plane_funcs = {
+ 	.update_plane = drm_atomic_helper_update_plane,
+ 	.disable_plane = drm_atomic_helper_disable_plane,
+-	.reset = appletbdrm_primary_plane_reset,
++	.atomic_create_state = appletbdrm_primary_plane_atomic_create_state,
+ 	.atomic_duplicate_state = appletbdrm_primary_plane_duplicate_state,
+ 	.atomic_destroy_state = appletbdrm_primary_plane_destroy_state,
+ 	.destroy = drm_plane_cleanup,
+-- 
