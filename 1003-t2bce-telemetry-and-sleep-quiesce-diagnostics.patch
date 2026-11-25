@@ -1,0 +1,315 @@
+From 66a1a5739d64db89e92dc95540ae8c0e66664bec Mon Sep 17 00:00:00 2001
+From: Piero Lenzo <3875310+pierolenzo@users.noreply.github.com>
+Date: Wed, 18 Nov 2026 12:01:50 +0100
+Subject: [PATCH] t2bce: add multi-layer telemetry logging and sleep-quiesce
+ diagnostics
+
+- Add telemetry instrumentation across t2bce_core (PCIe mailbox send/recv/async,
+  stateful suspend save, stateful resume restore, core resume notification)
+- Add telemetry instrumentation across t2bce_vhci (bus suspend, bus resume,
+  stateful reset-resume policy per port, cmd_port_resume, hub GetPortStatus,
+  SetPortFeature RESET/SUSPEND, ClearPortFeature SUSPEND, device teardown/create,
+  firmware endpoint state commands, system port state change events)
+- Add granular error logging in bce_vhci_suspend_quiesce() for endpoint pause
+  failures and port suspend failures (as identified in DEBUG_SLEEP_ANALYSIS.md)
+- Normalize bce_vhci_bus_suspend() return code to negative -EIO on error
+
+Signed-off-by: Piero Lenzo <3875310+pierolenzo@users.noreply.github.com>
+---
+ drivers/staging/t2bce/t2bce_core/mailbox.c    |  9 +-
+ drivers/staging/t2bce/t2bce_core/t2bce_main.c |  6 +-
+ drivers/staging/t2bce/t2bce_core/transport.c  |  1 +
+ drivers/staging/t2bce/t2bce_vhci/vhci.c       | 84 ++++++++++++-------
+ 4 files changed, 64 insertions(+), 36 deletions(-)
+
+diff --git a/drivers/staging/t2bce/t2bce_core/mailbox.c b/drivers/staging/t2bce/t2bce_core/mailbox.c
+index db26208..ce0c39a 100644
+--- a/drivers/staging/t2bce/t2bce_core/mailbox.c
++++ b/drivers/staging/t2bce/t2bce_core/mailbox.c
+@@ -43,7 +43,8 @@ int bce_mailbox_send_locked_timeout(struct bce_mailbox *mb, u64 msg, u64* recv,
+     }
+     reinit_completion(&mb->mb_completion);
+ 
+-    pr_debug("bce_mailbox_send: %llx\n", msg);
++    pr_info("t2bce_core: [CORE-MBOX-SEND] msg=0x%llx (type=0x%llx val=0x%llx)\n",
++            msg, (msg >> 48) & 0xffff, msg & 0xffffffffffffULL);
+     regb = (u32*) ((u8*) mb->reg_mb + REG_MBOX_OUT_BASE);
+     iowrite32((u32) msg, regb);
+     iowrite32((u32) (msg >> 32), regb + 1);
+@@ -54,11 +55,13 @@ int bce_mailbox_send_locked_timeout(struct bce_mailbox *mb, u64 msg, u64* recv,
+     if (atomic_read(&mb->mb_status) != 2) {
+         atomic_set(&mb->mb_status, 0);
+         status = -ETIMEDOUT;
++        pr_err("t2bce_core: [CORE-MBOX-ERR] send timed out for msg=0x%llx\n", msg);
+         goto out;
+     }
+ 
+     *recv = mb->mb_result;
+-    pr_debug("bce_mailbox_send: reply %llx\n", *recv);
++    pr_info("t2bce_core: [CORE-MBOX-RECV] reply=0x%llx (type=0x%llx val=0x%llx)\n",
++            *recv, (*recv >> 48) & 0xffff, *recv & 0xffffffffffffULL);
+ 
+     atomic_set(&mb->mb_status, 0);
+ out:
+@@ -148,7 +151,7 @@ int bce_mailbox_handle_interrupt(struct bce_mailbox *mb)
+             atomic_set(&mb->mb_status, 2);
+             complete(&mb->mb_completion);
+         } else {
+-            pr_debug("bce_mailbox_handle_interrupt: unsolicited reply %llx\n", mb->mb_result);
++            pr_info("t2bce_core: [CORE-MBOX-ASYNC] unsolicited reply from T2: 0x%llx\n", mb->mb_result);
+             atomic_set(&mb->mb_status, 0);
+         }
+     }
+diff --git a/drivers/staging/t2bce/t2bce_core/t2bce_main.c b/drivers/staging/t2bce/t2bce_core/t2bce_main.c
+index b135057..831ee1e 100644
+--- a/drivers/staging/t2bce/t2bce_core/t2bce_main.c
++++ b/drivers/staging/t2bce/t2bce_core/t2bce_main.c
+@@ -655,7 +655,8 @@ static int bce_pm_suspend_try_state(struct t2bce_device *bce)
+         }
+ 
+         if (BCE_MB_TYPE(resp) == BCE_MB_SAVE_RESTORE_STATE_COMPLETE) {
+-            pr_debug("t2bce_core: suspend: remote response: restore state saved\n");
++            pr_info("t2bce_core: [CORE-SUSPEND-STATE] remote response: restore state saved in DMA buffer size=%zu\n",
++                    bce->saved_data_dma_size);
+             bce->stateful_suspend_valid = true;
+             return 0;
+         }
+@@ -745,6 +746,9 @@ static int bce_pm_resume_stateful(struct t2bce_device *bce)
+     if (BCE_MB_TYPE(resp) != BCE_MB_SAVE_RESTORE_STATE_COMPLETE) {
+         pr_err("t2bce_core: resume with state failed (invalid device response)\n");
+         status = -EINVAL;
++    } else {
++        pr_info("t2bce_core: [CORE-RESUME-STATE] remote response: restore state loaded from DMA buffer size=%zu\n",
++                bce->saved_data_dma_size);
+     }
+ 
+ out_unmap:
+diff --git a/drivers/staging/t2bce/t2bce_core/transport.c b/drivers/staging/t2bce/t2bce_core/transport.c
+index 100516e..9255bb4 100644
+--- a/drivers/staging/t2bce/t2bce_core/transport.c
++++ b/drivers/staging/t2bce/t2bce_core/transport.c
+@@ -283,6 +283,7 @@ void t2bce_core_notify_resume_complete(struct t2bce_device *bce)
+     struct t2bce_core_client *client;
+     int srcu_idx;
+ 
++    pr_info("t2bce_core: [CORE-NOTIFY-RESUME] broadcasting resume complete to clients\n");
+     srcu_idx = srcu_read_lock(&bce->clients_srcu);
+     list_for_each_entry_srcu(client, &bce->clients, list,
+             srcu_read_lock_held(&bce->clients_srcu)) {
+diff --git a/drivers/staging/t2bce/t2bce_vhci/vhci.c b/drivers/staging/t2bce/t2bce_vhci/vhci.c
+index 0f91b8f..2ef0992 100644
+--- a/drivers/staging/t2bce/t2bce_vhci/vhci.c
++++ b/drivers/staging/t2bce/t2bce_vhci/vhci.c
+@@ -461,10 +461,16 @@ static int bce_vhci_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue, u1
+         if (port_status & BCE_VHCI_PORT_STATUS_C_CONNECTION)
+             ps->wPortChange |= USB_PORT_STAT_C_CONNECTION;
+         if (reset_resume)
+-            pr_debug("t2bce_vhci: hub reporting port=%u for reset-resume raw=%x status=%x\n",
+-                    wIndex, port_status, ps->wPortStatus);
+-        /* pr_debug("t2bce_vhci: hub GetPortStatus port=%u raw=%x status=%x change=%x\n",
+-                wIndex, port_status, ps->wPortStatus, ps->wPortChange); */
++            pr_info("t2bce_vhci: [VHCI-HUB-GET-STATUS] port=%u raw=0x%x (conn=%d en=%d susp=%d c_conn=%d) reset_resume=1 -> wPortStatus=0x%x wPortChange=0x%x\n",
++                    wIndex, port_status,
++                    !!(port_status & BCE_VHCI_PORT_STATUS_CONNECTED),
++                    !!(port_status & BCE_VHCI_PORT_STATUS_ENABLED),
++                    !!(port_status & (BCE_VHCI_PORT_STATUS_SUSPENDED | BCE_VHCI_PORT_STATUS_SUSPENDED_LEGACY)),
++                    !!(port_status & BCE_VHCI_PORT_STATUS_C_CONNECTION),
++                    ps->wPortStatus, ps->wPortChange);
++        else if (port_status & BCE_VHCI_PORT_STATUS_C_CONNECTION)
++            pr_info("t2bce_vhci: [VHCI-HUB-GET-STATUS] port=%u raw=0x%x (C_CONNECTION active) reset_resume=0 -> wPortStatus=0x%x wPortChange=0x%x\n",
++                    wIndex, port_status, ps->wPortStatus, ps->wPortChange);
+         return 0;
+     } else if (typeReq == SetPortFeature) {
+         if (wValue == USB_PORT_FEAT_POWER) {
+@@ -475,21 +481,21 @@ static int bce_vhci_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue, u1
+             return status;
+         }
+         if (wValue == USB_PORT_FEAT_RESET) {
+-            pr_debug("t2bce_vhci: hub SetPortFeature RESET port=%u\n", wIndex);
++            pr_info("t2bce_vhci: [VHCI-HUB-SET-RESET] usbcore initiated RESET on port=%u\n", wIndex);
+             if (wIndex <= BITS_PER_LONG)
+                 clear_bit(wIndex - 1, &vhci->stateful_reset_ports);
+             return bce_vhci_reset_device(vhci, wIndex, wValue);
+         }
+         if (wValue == USB_PORT_FEAT_SUSPEND) {
+-            /* Trace the usbcore hub state machine against the firmware port commands. */
+-            pr_debug("t2bce_vhci: hub SetPortFeature SUSPEND port=%u\n", wIndex);
++            pr_info("t2bce_vhci: [VHCI-HUB-SET-SUSPEND] usbcore requested SUSPEND on port=%u (sys_suspending=%d)\n",
++                    wIndex, vhci->system_suspending);
+             if (vhci->system_suspending) {
+                 pr_debug("t2bce_vhci: hub SetPortFeature SUSPEND port=%u skipped during system suspend\n",
+                         wIndex);
+                 return 0;
+             }
+             status = bce_vhci_cmd_port_suspend(&vhci->cq, (u8) wIndex);
+-            pr_debug("t2bce_vhci: hub SetPortFeature SUSPEND port=%u -> %d\n", wIndex, status);
++            pr_info("t2bce_vhci: [VHCI-HUB-SET-SUSPEND] cmd_port_suspend port=%u -> %d\n", wIndex, status);
+             return status;
+         }
+     } else if (typeReq == ClearPortFeature) {
+@@ -512,9 +518,9 @@ static int bce_vhci_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue, u1
+             return 0;
+         }
+         if (wValue == USB_PORT_FEAT_SUSPEND) {
+-            /* pr_debug("t2bce_vhci: hub ClearPortFeature SUSPEND port=%u\n", wIndex); */
++            pr_info("t2bce_vhci: [VHCI-HUB-CLEAR-SUSPEND] usbcore requested in-place resume on port=%u\n", wIndex);
+             status = bce_vhci_cmd_port_resume(&vhci->cq, (u8) wIndex);
+-            pr_debug("t2bce_vhci: hub ClearPortFeature SUSPEND port=%u -> %d\n", wIndex, status);
++            pr_info("t2bce_vhci: [VHCI-HUB-CLEAR-SUSPEND] cmd_port_resume port=%u -> %d\n", wIndex, status);
+             return status;
+         }
+     }
+@@ -548,6 +554,9 @@ static int bce_vhci_enable_device(struct usb_hcd *hcd, struct usb_device *udev)
+     vhci->port_to_device[udev->portnum] = devid;
+     vhci->devices[devid] = vdev;
+ 
++    pr_info("t2bce_vhci: [VHCI-DEVICE-CREATE] port=%u devid=%u (usb devnum is %d)\n",
++            udev->portnum, devid, udev->devnum);
++
+     bce_vhci_create_transfer_queue(vhci, &vdev->tq[0], &udev->ep0, devid, DMA_BIDIRECTIONAL);
+     udev->ep0.hcpriv = &vdev->tq[0];
+     vdev->tq_mask |= BIT(0);
+@@ -576,10 +585,11 @@ static void bce_vhci_free_device(struct usb_hcd *hcd, struct usb_device *udev)
+     int i;
+     bce_vhci_device_t devid;
+     struct bce_vhci_device *dev;
+-    pr_debug("t2bce_vhci: free_device port=%u\n", udev->portnum);
+     if (!vhci->port_to_device[udev->portnum])
+         return;
+     devid = vhci->port_to_device[udev->portnum];
++    pr_info("t2bce_vhci: [VHCI-DEVICE-TEARDOWN] usbcore tearing down port=%u devid=%u (usb devnum was %d)\n",
++            udev->portnum, devid, udev->devnum);
+     dev = vhci->devices[devid];
+     for (i = 0; i < 32; i++) {
+         if (dev->tq_mask & BIT(i)) {
+@@ -673,6 +683,8 @@ static int bce_vhci_resume_suspended(struct bce_vhci *vhci)
+         if (!vhci->port_to_device[port])
+             continue;
+         ret = bce_vhci_cmd_port_resume(&vhci->cq, (u8)port);
++        pr_info("t2bce_vhci: [VHCI-CMD-PORT-RESUME] sent port_resume to T2: port=%d devid=%u -> ret=%d\n",
++                port, vhci->port_to_device[port], ret);
+         if (ret && !status)
+             status = ret;
+     }
+@@ -699,7 +711,7 @@ static int bce_vhci_suspend_quiesce(struct usb_hcd *hcd)
+     int status;
+     struct bce_vhci *vhci = bce_vhci_from_hcd(hcd);
+ 
+-    pr_info("t2bce_vhci: suspend started\n");
++    pr_info("t2bce_vhci: [VHCI-BUS-SUSPEND] quiesce started\n");
+     flush_workqueue(vhci->tq_state_wq);
+ 
+     for (devid = 1; devid < ARRAY_SIZE(vhci->devices); devid++) {
+@@ -711,8 +723,11 @@ static int bce_vhci_suspend_quiesce(struct usb_hcd *hcd)
+             status = bce_vhci_transfer_queue_pause(
+                     &vhci->devices[devid]->tq[endp],
+                     BCE_VHCI_PAUSE_SUSPEND);
+-            if (status)
++            if (status) {
++                pr_err("t2bce_vhci: [SUSPEND-QUIESCE-ERR] pause failed devid=%d ep=%02x status=%d\n",
++                       devid, endp, status);
+                 goto abort;
++            }
+         }
+     }
+ 
+@@ -724,11 +739,14 @@ static int bce_vhci_suspend_quiesce(struct usb_hcd *hcd)
+         if (!vhci->port_to_device[port])
+             continue;
+         status = bce_vhci_cmd_port_suspend(&vhci->cq, (u8)port);
+-        if (status)
++        if (status) {
++            pr_err("t2bce_vhci: [SUSPEND-QUIESCE-ERR] port suspend failed port=%d devid=%d status=%d\n",
++                   port, vhci->port_to_device[port], status);
+             goto abort;
++        }
+     }
+ 
+-    pr_info("t2bce_vhci: suspend quiesce complete\n");
++    pr_info("t2bce_vhci: [VHCI-BUS-SUSPEND] quiesce complete\n");
+     return 0;
+ 
+ abort:
+@@ -742,14 +760,17 @@ static int bce_vhci_bus_suspend(struct usb_hcd *hcd)
+     int status;
+     struct bce_vhci *vhci = bce_vhci_from_hcd(hcd);
+ 
+-    pr_info("t2bce_vhci: bus_suspend entry\n");
++    pr_info("t2bce_vhci: [VHCI-BUS-SUSPEND] entry\n");
+     vhci->port_change_pending = 0;
+     WRITE_ONCE(vhci->system_suspending, true);
+     status = bce_vhci_suspend_quiesce(hcd);
+-    if (status)
++    if (status) {
+         WRITE_ONCE(vhci->system_suspending, false);
+-    pr_info("t2bce_vhci: bus_suspend exit status=%d\n", status);
+-    return status;
++        pr_err("t2bce_vhci: [VHCI-BUS-SUSPEND] failed status=%d, returning -EIO\n", status);
++        return status > 0 ? -EIO : status;
++    }
++    pr_info("t2bce_vhci: [VHCI-BUS-SUSPEND] exit status=0\n");
++    return 0;
+ }
+ 
+ /*
+@@ -768,11 +789,12 @@ static void bce_vhci_mark_stateful_reset_ports(struct bce_vhci *vhci)
+         devid = vhci->port_to_device[port];
+         if (!devid || !vhci->devices[devid])
+             continue;
+-        if (vhci->devices[devid]->tq_mask & GENMASK(15, 1)) {
++        bool has_bulk_out = (vhci->devices[devid]->tq_mask & GENMASK(15, 1)) != 0;
++        pr_info("t2bce_vhci: [VHCI-RESUME-POLICY] port=%d devid=%u tq_mask=0x%x -> %s\n",
++                port, devid, vhci->devices[devid]->tq_mask,
++                has_bulk_out ? "RESET-RESUME" : "IN-PLACE RESUME");
++        if (has_bulk_out)
+             set_bit(port - 1, &vhci->stateful_reset_ports);
+-            pr_debug("t2bce_vhci: stateful resume will reset-resume port=%d dev=%u tq_mask=%x\n",
+-                    port, devid, vhci->devices[devid]->tq_mask);
+-        }
+     }
+ }
+ 
+@@ -983,16 +1005,14 @@ static int bce_vhci_handle_firmware_event(struct bce_vhci *vhci, struct bce_vhci
+         if (msg->param2 == BCE_VHCI_ENDPOINT_ACTIVE) {
+             int ret = bce_vhci_transfer_queue_resume(tq, BCE_VHCI_PAUSE_FIRMWARE);
+ 
+-            pr_debug("t2bce_vhci: FW endpoint request ACTIVE dev=%u ep=%02x paused_by=%x state=%x active=%u ret=%d reply=%u\n",
+-                    devid, tq->endp_addr, tq->paused_by, tq->state, tq->active, ret,
+-                    ret ? BCE_VHCI_ERROR : BCE_VHCI_SUCCESS);
++            pr_info("t2bce_vhci: [VHCI-T2-FW-CMD] endpoint request ACTIVE dev=%u ep=%02x (ret=%d)\n",
++                    devid, tq->endp_addr, ret);
+             return ret ? BCE_VHCI_ERROR : BCE_VHCI_SUCCESS;
+         } else if (msg->param2 == BCE_VHCI_ENDPOINT_PAUSED) {
+             int ret = bce_vhci_transfer_queue_pause(tq, BCE_VHCI_PAUSE_FIRMWARE);
+ 
+-            pr_debug("t2bce_vhci: FW endpoint request PAUSED dev=%u ep=%02x paused_by=%x state=%x active=%u ret=%d reply=%u\n",
+-                    devid, tq->endp_addr, tq->paused_by, tq->state, tq->active, ret,
+-                    ret ? BCE_VHCI_ERROR : BCE_VHCI_SUCCESS);
++            pr_info("t2bce_vhci: [VHCI-T2-FW-CMD] endpoint request PAUSED dev=%u ep=%02x (ret=%d)\n",
++                    devid, tq->endp_addr, ret);
+             return ret ? BCE_VHCI_ERROR : BCE_VHCI_SUCCESS;
+         }
+         return BCE_VHCI_BAD_ARGUMENT;
+@@ -1003,8 +1023,8 @@ static int bce_vhci_handle_firmware_event(struct bce_vhci *vhci, struct bce_vhci
+             tq->active = false;
+             tq->stalled = true;
+             spin_unlock_irqrestore(&tq->urb_lock, flags);
+-            pr_warn("t2bce_vhci: firmware endpoint stalled dev=%u ep=%02x paused_by=%x; %s\n",
+-                    devid, tq->endp_addr, tq->paused_by,
++            pr_warn("t2bce_vhci: [VHCI-T2-FW-CMD] endpoint STALLED dev=%u ep=%02x; %s\n",
++                    devid, tq->endp_addr,
+                     tq->endp_addr == 0x00 ? "scheduling EP0 reset" : "leaving stalled");
+             if (tq->endp_addr == 0x00)
+                 bce_vhci_transfer_queue_request_reset(tq);
+@@ -1094,7 +1114,7 @@ static void bce_vhci_handle_system_event(struct bce_vhci_event_queue *q, struct
+                msg->param1 > 0 &&
+                msg->param1 < ARRAY_SIZE(q->vhci->port_to_device)) {
+         set_bit(msg->param1 - 1, &q->vhci->port_change_pending);
+-        pr_debug("t2bce_vhci: port state change event: port=%u state=%s status=%x p2=%llx\n",
++        pr_info("t2bce_vhci: [VHCI-T2-SYSTEM-EVENT] T2 signaled status change: port=%u state=%s status=0x%x raw_p2=0x%llx\n",
+                 msg->param1, bce_vhci_port_state_change_label(msg->param2),
+                 msg->status, msg->param2);
+     } else {
+-- 
+2.56.1
+
